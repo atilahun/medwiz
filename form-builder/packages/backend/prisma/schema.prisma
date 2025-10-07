@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Workflow {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  status      WorkflowStatus @default(DRAFT)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  pages       Page[]
+
+  @@map("workflows")
+}
+
+model Page {
+  id         String   @id @default(uuid())
+  workflowId String   @map("workflow_id")
+  title      String
+  orderIndex Int      @map("order_index")
+  settings   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sections   Section[]
+
+  @@map("pages")
+}
+
+model Section {
+  id              String    @id @default(uuid())
+  pageId          String    @map("page_id")
+  parentSectionId String?   @map("parent_section_id")
+  title           String
+  description     String?
+  orderIndex      Int       @map("order_index")
+  settings        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  page            Page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  parentSection   Section?  @relation("SubSections", fields: [parentSectionId], references: [id], onDelete: Cascade)
+  subSections     Section[] @relation("SubSections")
+  fields          Field[]
+
+  @@map("sections")
+}
+
+model Field {
+  id          String    @id @default(uuid())
+  sectionId   String    @map("section_id")
+  type        FieldType
+  name        String
+  label       String
+  placeholder String?
+  orderIndex  Int       @map("order_index")
+  required    Boolean   @default(false)
+  settings    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  section     Section   @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  validations Validation[]
+
+  @@map("fields")
+}
+
+model Validation {
+  id           String   @id @default(uuid())
+  fieldId      String   @map("field_id")
+  type         ValidationType
+  value        String?
+  errorMessage String   @map("error_message")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  field        Field    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@map("validations")
+}
+
+enum WorkflowStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  EMAIL
+  PASSWORD
+  SELECT
+  MULTISELECT
+  CHECKBOX
+  RADIO
+  DATE
+  DATETIME
+  TIME
+  FILE
+  IMAGE
+  RICHTEXT
+  PHONE
+  URL
+  COLOR
+  RANGE
+  RATING
+  CUSTOM
+}
+
+enum ValidationType {
+  REQUIRED
+  MIN_LENGTH
+  MAX_LENGTH
+  MIN_VALUE
+  MAX_VALUE
+  PATTERN
+  EMAIL
+  URL
+  PHONE
+  CUSTOM
+  MATCH_FIELD
+}
